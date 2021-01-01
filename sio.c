@@ -36,8 +36,12 @@
 
 /*----------------------------------------------------------------------*/
 
-static int _fd = -1;
+static int _fdo = -1;
+static int _fdi = -1;
 static char *_sdev = NULL;
+static int _stdio = 0;
+
+extern FILE *_log;
 
 int sio_open(char *sdev, int speed) {
   struct termios ts;
@@ -46,28 +50,38 @@ int sio_open(char *sdev, int speed) {
 
   sio_close();
 
-  _fd = open(sdev, O_RDWR | O_NOCTTY | O_NONBLOCK, 0);
+  if (strcmp(sdev, "-") == 0) {
+    /* requires _log to be changed... */
+    _fdo = 1;
+    _fdi = 0;
+    _stdio = 1;
+    if (_sdev) free(_sdev);
+    _sdev = strdup(sdev);
+    return 0;
+  } else {
+    _fdo = _fdi = open(sdev, O_RDWR | O_NOCTTY | O_NONBLOCK, 0);
+  }
 
   if (_sdev) free(_sdev);
   _sdev = strdup(sdev);
 
-  if (_fd < 0) {
+  if (_fdo < 0) {
     perror(sdev);
     return -1;
   }
 
-  if (!isatty(_fd)) {
+  if (!isatty(_fdo)) {
     fprintf(stderr, "%s: not a tty\n", sdev);
-    close(_fd);
-    _fd = -1;
+    close(_fdo);
+    _fdo = -1;
     return -1;
   }
 
-  if (tcgetattr(_fd, &ts) == -1) {
+  if (tcgetattr(_fdo, &ts) == -1) {
     fprintf(stderr, "failed to get tty settings\n");
     perror(sdev);
-    close(_fd);
-    _fd = -1;
+    close(_fdo);
+    _fdo = -1;
     return -1;
   }
 
@@ -89,19 +103,19 @@ int sio_open(char *sdev, int speed) {
     perror(sdev);
   }
 
-  if (tcsetattr(_fd, TCSAFLUSH, &ts) == -1) {
+  if (tcsetattr(_fdo, TCSAFLUSH, &ts) == -1) {
     fprintf(stderr, "failed to set line attributes\n");
     perror(sdev);
   }
 
   /* Set the line back to blocking mode after setting CLOCAL */
-  if (ioctl(_fd, FIONBIO, &off) < 0) {
+  if (ioctl(_fdo, FIONBIO, &off) < 0) {
     fprintf(stderr, "failed to set blocking mode\n");
     perror(sdev);
   }
 
   modemlines = TIOCM_RTS;
-  if (ioctl(_fd, TIOCMBIC, &modemlines)) {
+  if (ioctl(_fdo, TIOCMBIC, &modemlines)) {
     /* can't clear RTS line, see ERRNO */
     fprintf(stderr, "failed to clear RTS line\n");
     perror(sdev);
@@ -113,13 +127,13 @@ int sio_open(char *sdev, int speed) {
 int sio_close() {
   int retc;
 
-  if (_fd == -1) {
+  if (_fdo == -1) {
     errno = EBADF;
     return -1;
   }
 
-  retc = close(_fd);
-  _fd = -1;
+  retc = close(_fdo);
+  _fdo = -1;
 
   return retc;
 }
@@ -127,9 +141,9 @@ int sio_close() {
 int sio_set_speed(int speed) {
   struct termios ts;
 
-  if (_fd < 0) return 0;
+  if (_fdo < 0 || _stdio) return 0;
 
-  if (tcgetattr(_fd, &ts) == -1) {
+  if (tcgetattr(_fdo, &ts) == -1) {
     perror(_sdev);
     return -1;
   }
@@ -144,7 +158,7 @@ int sio_set_speed(int speed) {
     return -1;
   }
 
-  if (tcsetattr(_fd, TCSAFLUSH, &ts) == -1) {
+  if (tcsetattr(_fdo, TCSAFLUSH, &ts) == -1) {
     perror(_sdev);
     return -1;
   }
@@ -153,18 +167,18 @@ int sio_set_speed(int speed) {
 }
 
 int sio_send(char *buf, int len) {
-  if (_fd < 0) return -1;
+  if (_fdo < 0) return -1;
   if (len < 0) len = strlen(buf);
-  if (write(_fd, buf, len) == len) return 0;
+  if (write(_fdo, buf, len) == len) return 0;
   return -1;
 }
 
 int sio_receive(char *buf, int len) {
   int i, n;
 
-  if (_fd < 0) return -1;
+  if (_fdo < 0) return -1;
   for (i = 0; i < len; ++i) {
-    n = read(_fd, &buf[i], 1);
+    n = read(_fdi, &buf[i], 1);
     if (n == 0) break;		/* timeout! */
   }
   return i;

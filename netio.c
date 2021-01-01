@@ -46,20 +46,28 @@ extern int _level;     /* which CP/NET version is being emulated */
 extern int _netID;     /* our server ID */
 extern int _debug;     /* debug mask */
 
+extern FILE *_log;
+
 void wait_for_packet() {
   unsigned char buf[2];
 
   /* wait for ENQ byte... */
   while (1) {
     while (sio_receive(buf, 1) < 1) {}
-    if (_debug & DEBUG_PACKET) printf(">> %02X\n", buf[0]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, ">> %02X\n", buf[0]);
+      fflush(_log);
+    }
     if (buf[0] == ENQ) break;
   }
       
   /* send ACK back */
   buf[0] = ACK;
   sio_send(buf, 1);
-  if (_debug & DEBUG_PACKET) printf("\t<< %02X\n", buf[0]);
+  if (_debug & DEBUG_PACKET) {
+    fprintf(_log, "\t<< %02X\n", buf[0]);
+    fflush(_log);
+  }
 }
 
 int get_packet(char *data, int *len, int *fnc, int *sid) {
@@ -70,15 +78,24 @@ int get_packet(char *data, int *len, int *fnc, int *sid) {
   n = sio_receive(buf, 7);
   cks = 0;
   for (i = 0; i < n; ++i) {
-    if (_debug & DEBUG_PACKET) printf(">> %02X\n", buf[i]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, ">> %02X\n", buf[i]);
+      fflush(_log);
+    }
     cks += buf[i];
   }
   if (buf[0] != SOH || n != 7) {
-    if (_debug & DEBUG_PACKET) printf("Bad packet\n\n");
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "Bad packet\n\n");
+      fflush(_log);
+    }
     return -1;
   }
   if (cks != 0) {
-    if (_debug & DEBUG_PACKET) printf("Checksum error\n\n");
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "Checksum error\n\n");
+      fflush(_log);
+    }
     return -1;
   }
   did = buf[2];
@@ -87,28 +104,43 @@ int get_packet(char *data, int *len, int *fnc, int *sid) {
   siz = buf[5];
   *len = siz + 1;
   if (did != _netID) {
-    if (_debug & DEBUG_PACKET) printf("Not for us...\n\n");
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "Not for us...\n\n");
+      fflush(_log);
+    }
     return -1;
   }
       
   /* send ACK */
   buf[0] = ACK;
   sio_send(buf, 1);
-  if (_debug & DEBUG_PACKET) printf("\t<< %02X\n", buf[0]);
+  if (_debug & DEBUG_PACKET) {
+    fprintf(_log, "\t<< %02X\n", buf[0]);
+    fflush(_log);
+  }
       
   /* receive data part */
   n = sio_receive(buf, siz+2);
   cks = 0;
   for (i = 0; i < n; ++i) {
-    if (_debug & DEBUG_PACKET) printf(">> %02X\n", buf[i]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, ">> %02X\n", buf[i]);
+      fflush(_log);
+    }
     cks += buf[i];
   }
   if (buf[0] != STX) {
-    if (_debug & DEBUG_PACKET) printf("Bad packet\n\n");
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "Bad packet\n\n");
+      fflush(_log);
+    }
     return -1;
   }
   if (n != siz+2) {
-    if (_debug & DEBUG_PACKET) printf("Bad length\n\n");
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "Bad length\n\n");
+      fflush(_log);
+    }
     return -1;
   }
   for (i = 0; i < siz+1; ++i) {
@@ -118,32 +150,50 @@ int get_packet(char *data, int *len, int *fnc, int *sid) {
   /* receive checksum field */
   n = sio_receive(buf, 2);
   for (i = 0; i < n; ++i) {
-    if (_debug & DEBUG_PACKET) printf(">> %02X\n", buf[i]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, ">> %02X\n", buf[i]);
+      fflush(_log);
+    }
     cks += buf[i];
   }
   if (buf[0] != ETX || n != 2) {
-    if (_debug & DEBUG_PACKET) printf("Bad packet\n\n");
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "Bad packet\n\n");
+      fflush(_log);
+    }
     return -1;
   }
   if (cks != 0) {
-    if (_debug & DEBUG_PACKET) printf("Checksum error\n\n");
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "Checksum error\n\n");
+      fflush(_log);
+    }
     return -1;
   }
       
   /* receive trailer */
   n = sio_receive(buf, 1);
   for (i = 0; i < n; ++i) {
-    if (_debug & DEBUG_PACKET) printf(">> %02X\n", buf[i]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, ">> %02X\n", buf[i]);
+      fflush(_log);
+    }
   }
   if (buf[0] != EOT || n != 1) {
-    if (_debug & DEBUG_PACKET) printf("Bad packet\n\n");
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "Bad packet\n\n");
+      fflush(_log);
+    }
     return -1;
   }
 
   /* send ACK */
   buf[0] = ACK;
   sio_send(buf, 1);
-  if (_debug & DEBUG_PACKET) printf("\t<< %02X\n", buf[0]);
+  if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "\t<< %02X\n", buf[0]);
+      fflush(_log);
+    }
   
   return 0;
 }
@@ -153,9 +203,10 @@ int send_packet(int to, int fnc, char *data, int len) {
   unsigned char buf[1024], cks;
 
   if (_debug & DEBUG_DATA) {
-    printf("Replying\n");
+    fprintf(_log, "Replying\n");
     dump_data(data, len);
-    printf("\n");
+    fprintf(_log, "\n");
+    fflush(_log);
   }
 
   if (len < 1 || len > 256) {
@@ -165,11 +216,17 @@ int send_packet(int to, int fnc, char *data, int len) {
 
   buf[0] = ENQ;
   sio_send(buf, 1);
-  if (_debug & DEBUG_PACKET) printf("\t<< %02X\n", buf[0]);
+  if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "\t<< %02X\n", buf[0]);
+      fflush(_log);
+    }
   /* wait for ACK */
   n = sio_receive(buf, 1);
   for (i = 0; i < n; ++i) {
-    if (_debug & DEBUG_PACKET) printf(">> %02X\n", buf[i]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, ">> %02X\n", buf[i]);
+      fflush(_log);
+    }
   }
       
   buf[0] = SOH;
@@ -181,15 +238,24 @@ int send_packet(int to, int fnc, char *data, int len) {
   cks = 0;
   for (i = 0; i < 6; ++i) {
     cks += buf[i];
-    if (_debug & DEBUG_PACKET) printf("\t<< %02X\n", buf[i]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "\t<< %02X\n", buf[i]);
+      fflush(_log);
+    }
   }
   buf[6] = -cks;       /* HCS */
-  if (_debug & DEBUG_PACKET) printf("\t<< %02X\n", buf[6]);
+  if (_debug & DEBUG_PACKET) {
+    fprintf(_log, "\t<< %02X\n", buf[6]);
+    fflush(_log);
+  }
   sio_send(buf, 7);
   /* wait for ACK */
   n = sio_receive(buf, 1);
   for (i = 0; i < n; ++i) {
-    if (_debug & DEBUG_PACKET) printf(">> %02X\n", buf[i]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, ">> %02X\n", buf[i]);
+      fflush(_log);
+    }
   }
 
   buf[0] = STX;
@@ -201,21 +267,36 @@ int send_packet(int to, int fnc, char *data, int len) {
   cks = 0;
   for (i = 0; i < len + 2; ++i) {
     cks += buf[i];
-    if (_debug & DEBUG_PACKET) printf("\t<< %02X\n", buf[i]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "\t<< %02X\n", buf[i]);
+      fflush(_log);
+    }
   }
   buf[len+2] = -cks;
-  if (_debug & DEBUG_PACKET) printf("\t<< %02X\n", buf[len+2]);
+  if (_debug & DEBUG_PACKET) {
+    fprintf(_log, "\t<< %02X\n", buf[len+2]);
+    fflush(_log);
+  }
   buf[len+3] = EOT;
-  if (_debug & DEBUG_PACKET) printf("\t<< %02X\n", buf[len+3]);
+  if (_debug & DEBUG_PACKET) {
+    fprintf(_log, "\t<< %02X\n", buf[len+3]);
+    fflush(_log);
+  }
   sio_send(buf, len+4);
   /* wait for ACK */
   n = sio_receive(buf, 1);
   for (i = 0; i < n; ++i) {
-    if (_debug & DEBUG_PACKET) printf(">> %02X\n", buf[i]);
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, ">> %02X\n", buf[i]);
+      fflush(_log);
+    }
   }
 
   if (n < 1) {
-    if (_debug & DEBUG_PACKET) printf("No ACK?\n\n");
+    if (_debug & DEBUG_PACKET) {
+      fprintf(_log, "No ACK?\n\n");
+      fflush(_log);
+    }
   }
 
   return 0;

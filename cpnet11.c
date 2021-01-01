@@ -46,6 +46,8 @@ extern char _passwd[8];
 
 extern uchar allocv[256];
 
+extern FILE *_log;
+
 int cpnet_11() {
   int sid, fnc, len;
   int first_connect;
@@ -81,8 +83,9 @@ int cpnet_11() {
         fname = fn_name[fnc - (64-41)];
       else
         fname = "";
-      printf("Requested function %d (%02Xh): %s\n",
+      fprintf(_log, "Requested function %d (%02Xh): %s\n",
              fnc, (unsigned char) fnc, fname);
+      fflush(_log);
       dump_data(buf, len);
     }
     
@@ -721,10 +724,16 @@ int cpnet_11() {
           _logged_in = 1;
           first_connect = 1;
           send_ok(sid, 64);
-          if (_debug & DEBUG_MISC) printf("requester %d logged in\n", sid);
+          if (_debug & DEBUG_MISC) {
+            fprintf(_log, "requester %d logged in\n", sid);
+            fflush(_log);
+          }
         } else {
           send_error(sid, 14);
-          if (_debug & DEBUG_MISC) printf("requester %d login denied, bad password\n", sid);
+          if (_debug & DEBUG_MISC) {
+            fprintf(_log, "requester %d login denied, bad password\n", sid);
+            fflush(_log);
+          }
         }
         break;
         
@@ -732,7 +741,10 @@ int cpnet_11() {
         if (_logged_in) {
           _logged_in = 0;
           send_ok(sid, 65);
-          if (_debug & DEBUG_MISC) printf("requester %d logged out\n", sid);
+          if (_debug & DEBUG_MISC) {
+            fprintf(_log, "requester %d logged out\n", sid);
+            fflush(_log);
+          }
         } else {
           send_error(sid, 65);
         }
@@ -741,9 +753,10 @@ int cpnet_11() {
       case 66: /* send message on network */
                /* CP/NET 1.1 apparently uses it only for mail exchange */
         if (_logged_in) {
-          printf("Mail message from requester %d:\n", sid);
+          fprintf(_log, "Mail message from requester %d:\n", sid);
           buf[len] = 0;
-          printf("[%02X] \"%s\"\n", (unsigned) buf[0], &buf[1]);
+          fprintf(_log, "[%02X] \"%s\"\n", (unsigned) buf[0], &buf[1]);
+          fflush(_log);
           send_ok(sid, 0);
         } else {
           send_error(sid, 0);

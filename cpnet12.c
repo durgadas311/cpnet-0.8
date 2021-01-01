@@ -46,6 +46,8 @@ extern char _passwd[8];
 
 extern uchar allocv[256];
 
+extern FILE *_log;
+
 int cpnet_12() {
   int sid, fnc, len;
   int first_connect;
@@ -81,8 +83,9 @@ int cpnet_12() {
         fname = fn_name[fnc - (64-41)];
       else
         fname = "";
-      printf("Requested function %d (%02Xh): %s\n",
+      fprintf(_log, "Requested function %d (%02Xh): %s\n",
              fnc, (unsigned char) fnc, fname);
+      fflush(_log);
       dump_data(buf, len);
     }
     
@@ -684,10 +687,16 @@ int cpnet_12() {
           _logged_in = 1;
           first_connect = 1;
           send_ok(sid, 64);
-          if (_debug & DEBUG_MISC) printf("requester %d logged in\n", sid);
+          if (_debug & DEBUG_MISC) {
+            fprintf(_log, "requester %d logged in\n", sid);
+            fflush(_log);
+          }
         } else {
           send_error(sid, 14);
-          if (_debug & DEBUG_MISC) printf("requester %d login denied, bad password\n", sid);
+          if (_debug & DEBUG_MISC) {
+            fprintf(_log, "requester %d login denied, bad password\n", sid);
+            fflush(_log);
+          }
         }
         break;
         
@@ -695,7 +704,10 @@ int cpnet_12() {
         if (_logged_in) {
           _logged_in = 0;
           send_ok(sid, 65);
-          if (_debug & DEBUG_MISC) printf("requester %d logged out\n", sid);
+          if (_debug & DEBUG_MISC) {
+            fprintf(_log, "requester %d logged out\n", sid);
+            fflush(_log);
+          }
         } else {
           send_error(sid, 65);
         }

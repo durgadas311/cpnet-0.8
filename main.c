@@ -59,6 +59,7 @@
 
 int  _netID = 0;   /* our server ID */
 int  _debug = 0;   /* debug mask */
+FILE *_log = NULL;
 
 int  _logged_in = 0;
 char _passwd[8];
@@ -136,9 +137,11 @@ char *fn_name[] = {
 int main(int argc, char *argv[]) {
   int  i;
   char *ini_name = NULL;
+  FILE *log;
   unsigned char buf[1024];
 
   /* initializations */
+  _log = stdout;
 
   for (i = 0; i < 16; ++i) {
     disk_to_dir[i] = NULL;
@@ -177,6 +180,14 @@ int main(int argc, char *argv[]) {
           _level = CPNET_1_2;
         else
           fprintf(stderr, "%s: unknown CP/NET level, must be 1.1 or 1.2\n", argv[0]);
+      }
+    } else if (strcmp(argv[i], "-log") == 0) {
+      ++i;
+      if (!argv[i]) {
+        fprintf(stderr, "%s: -log option requires argument\n", argv[0]);
+      } else {
+        log = fopen(argv[i], "w");
+        if (log != NULL) _log = log;
       }
     } else if (strcmp(argv[i], "-debug") == 0) {
       ++i;
@@ -245,13 +256,19 @@ int main(int argc, char *argv[]) {
 
   if (_debug & DEBUG_MISC) {
     for (i = 0; i < 16; ++i) {
-      if (disk_to_dir[i]) printf("%c: = %s\n", i + 'A', disk_to_dir[i]);
+      if (disk_to_dir[i]) {
+        fprintf(_log, "%c: = %s\n", i + 'A', disk_to_dir[i]);
+        fflush(_log);
+      }
     }
   }
 
   for (i = 0; i < 8; ++i) {
     if (lst_to_dev[i].fname) {
-      if (_debug & DEBUG_MISC) printf("LST%d: = %s\n", i, lst_to_dev[i].fname);
+      if (_debug & DEBUG_MISC) {
+        fprintf(_log, "LST%d: = %s\n", i, lst_to_dev[i].fname);
+        fflush(_log);
+      }
       if (strcmp(lst_to_dev[i].fname, "-") == 0) {
         lst_to_dev[i].f = stdout;
       } else if (strcmp(lst_to_dev[i].fname, "--") == 0) {
@@ -272,11 +289,12 @@ int main(int argc, char *argv[]) {
   }
 
   if (_debug & DEBUG_MISC) {
-    printf("emulating CP/NET %s\n", (_level == CPNET_1_1) ? "1.1" : "1.2");
-    printf("%s open at %d baud\n", _sdev, get_baud(_speed));
-    printf("server id is %d\n", _netID);
-    printf("network password is %.8s\n", _passwd);
-    printf("entering server loop...\n");
+    fprintf(_log, "emulating CP/NET %s\n", (_level == CPNET_1_1) ? "1.1" : "1.2");
+    fprintf(_log, "%s open at %d baud\n", _sdev, get_baud(_speed));
+    fprintf(_log, "server id is %d\n", _netID);
+    fprintf(_log, "network password is %.8s\n", _passwd);
+    fprintf(_log, "entering server loop...\n");
+    fflush(_log);
   }
 
   /* main loop - inside cpnet_11() and cpnet_12() routines */
@@ -329,22 +347,23 @@ void dump_data(unsigned char *buf, int len) {
   
   addr = 0;
   while (len > 0) {
-    printf("%04X: ", addr);
+    fprintf(_log, "%04X: ", addr);
     for (i = 0; i < 16; ++i) {
       if (len > i)
-        printf("%02X ", buf[addr+i]);
+        fprintf(_log, "%02X ", buf[addr+i]);
       else
-        printf("   ");
+        fprintf(_log, "   ");
     }
     for (i = 0; i < 16; ++i) {
       if (len > i)
-        printf("%c", (buf[addr+i] >= 32 && buf[addr+i] < 127) ? buf[addr+i] : '.');
+        fprintf(_log, "%c", (buf[addr+i] >= 32 && buf[addr+i] < 127) ? buf[addr+i] : '.');
       else
-        printf(" ");
+        fprintf(_log, " ");
     }
     addr += 16;
     len -= 16;
-    printf("\n");
+    fprintf(_log, "\n");
+    fflush(_log);
   }
 }
 
@@ -376,6 +395,7 @@ int lst_output(int num, char *buf, int len) {
 
 int read_ini(char *fname) {
   FILE *ini;
+  FILE *log;
   int  i;
   char *home, buf[INI_MAX_LINE_LEN], arg[INI_MAX_LINE_LEN];
 
@@ -403,6 +423,10 @@ int read_ini(char *fname) {
       }
       if (ini_get_item(ini, "netid", arg)) {
         _netID = atoi(arg);
+      }
+      if (ini_get_item(ini, "log", arg)) {
+        log = fopen(arg, "w");
+        if (log != NULL) _log = log;
       }
       if (ini_get_item(ini, "password", arg)) {
         int len = strlen(arg);
