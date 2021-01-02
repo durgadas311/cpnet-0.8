@@ -103,7 +103,8 @@ int get_packet(char *data, int *len, int *fnc, int *sid) {
   *fnc = buf[4];
   siz = buf[5];
   *len = siz + 1;
-  if (did != _netID) {
+  /* fnc 0xf0-0xff are specil proxy functions */
+  if (did != _netID && *fnc < 0xf0) {
     if (_debug & DEBUG_PACKET) {
       fprintf(_log, "Not for us...\n\n");
       fflush(_log);
