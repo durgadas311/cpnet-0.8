@@ -183,7 +183,7 @@ char *getname(struct cpmfcb *fcb) {
   }
   *p++ = '.';
   for (i = 0; i < 3; ++i) {
-    c = fcb->ext[i] & 0x7f;
+    c = fcb->name[8 + i] & 0x7f;
     if (!c || c == ' ') {
       if (i == 0) p--;        /* remove dot if ext empty */
       break;
@@ -224,7 +224,7 @@ int setname(struct cpmfcb *fcb, char *name) {
 int match_fcb(struct cpmfcb *mask, struct cpmfcb *fcb) {
   int i;
   
-  if (fcb->name[0] == ' ' && fcb->ext[0] == ' ') return 0;
+  if (fcb->name[0] == ' ' && fcb->name[8] == ' ') return 0;
   
   for (i = 0; i < 11; ++i) {
     if (mask->name[i] == '?') continue;

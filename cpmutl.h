@@ -28,8 +28,7 @@ typedef unsigned short uint16;
 
 struct cpmfcb {
   uchar drive;        /* drive code */
-  uchar name[8];      /* file name */
-  uchar ext[3];       /* file type */
+  uchar name[11];     /* file name and type */
   uchar ex;           /* file extent */
   uchar s1, s2;
   uchar rc;           /* number of records in present extent */
