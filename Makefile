@@ -3,6 +3,7 @@ SHELL=/bin/sh
 CC = cc
 #CFLAGS = -g -Wall
 #CFLAGS = -O3
+CFLAGS = -Og
 LIBS =
 
 SRCS = main.c \
