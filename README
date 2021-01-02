@@ -49,12 +49,17 @@ The server program accepts a number of command line options:
                   either 1.1 or 1.2 (defaults to 1.2)
 
   -port device    Sets the serial port to 'device', overriding the
-                  initialization file settings.
+                  initialization file settings. Device may be "-"
+                  to indicate use of stdin/stdout for communication
+                  (see also -log option).
 
   -speed value    Sets the serial baud rate to 'value', overriding the
                   initialization file settings. The argument must be
                   an standard serial baud rate, 38400 is assumed if an
                   invalid value is specified.
+
+  -log file       Use 'file' to log debug data, instead of stdout.
+                  Must be used if 'device' is set to "-" (stdio).
                   
   -debug value    Sets the debug mask to 'value', overriding the
                   initialization file settings. The debug mask can be
@@ -128,6 +133,10 @@ Section [defaults]
 level = 1.2            The CP/NET version level to emulate, either 1.1 or
                        1.2.
 
+log = file             The file (path) to use for logging debug output,
+                       instead of stdout. This should especially be set
+                       whenever device is set to "-"
+
 debug = 0              Sets the debug mask. See the command-line options
                        description above for a list of possible values.
 
@@ -142,7 +151,11 @@ password = PASSWORD    Sets the network password. Only the first 8 letters
 
 Section [comm]
 
-device = /dev/ttyS0    Specifies the serial communication device.
+device = /dev/ttyS0    Specifies the serial communication device. May be
+                       "-" to use stdio, in which case 'speed' has no
+                       meaning. Stdio also necessitates that 'log' also
+                       be set, otherwise debug output will collide with
+                       CP/NET communications.
 
 speed = 38400          Specifies the serial communication baud rate.
 
