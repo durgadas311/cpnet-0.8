@@ -90,6 +90,11 @@ The server program accepts a number of command line options:
   -netid id       Sets the server's network ID to 'id', overriding the
                   initialization file settings.
 
+  -clientid id    Declares the node ID to use for the client, if the
+                  client requests it. This provides support for
+                  cpnet-z80 serial port clients. 'id' may be specified
+                  in hexadecimal by prefixing with "0x".
+
   -pwd passwd     Sets the network password to 'passwd', overriding the
                   initialization file settings. Only the first 8 characters
                   are used, and the string is converted to UPPERCASE letters.
@@ -144,6 +149,11 @@ netid = 0              Sets the server's network ID. There is no reason to
                        change this, unless you are running multiple servers
                        on the same or different PCs, connected to the same
                        CP/M machine.
+
+clientid = id          Declares the node ID to use for the client, if the
+                       client requests it. This provides support for
+                       cpnet-z80 serial port clients. 'id' may be specified
+                       in hexadecimal by prefixing with "0x".
 
 password = PASSWORD    Sets the network password. Only the first 8 letters
                        will be used, and the string converted to UPPERCASE.
@@ -203,6 +213,25 @@ By default no printers are defined, and any printer output will be ignored.
 
 All settings, except the disk-to-directory and printer-to-file mappings, can
 be overriden by command-line options.
+
+
+Support for cpnet-z80 Clients
+-----------------------------
+
+Serial port clients from the cpnet-z80, using the "DRI" protocol,
+are supported with the addition of special "proxy" CP/NET functions.
+These functions use FNC codes 0xF0 through 0xFF (240-255), and the
+request's DID is not required to match 'netid'.
+
+Function 255 is a request for the programmed client ID, and the response
+is a simple message with the client ID set in the DID field.  If no
+"clientid" is set in the ini file, then this server will assign client IDs
+in the range 240-254, changing the number on each function 255 request.
+
+Function 254 is a "network shutdown" message and has no response.
+This request is accepted but otherwise ignored (currently). It is
+typically implemented as a clean shutdown of network connections
+(sockets and other resources).
 
 
 Running

@@ -234,6 +234,13 @@ int main(int argc, char *argv[]) {
       } else {
         _netID = atoi(argv[i]);
       }
+    } else if (strcmp(argv[i], "-clientid") == 0) {
+      ++i;
+      if (!argv[i]) {
+        fprintf(stderr, "%s: -clientid option requires argument\n", argv[0]);
+      } else {
+        _clientID = strtol(argv[i], NULL, 0);
+      }
     } else if (strcmp(argv[i], "-ini") == 0) {
       ++i;  /* we already processed this option */
     } else if ((strcmp(argv[i], "-version") == 0) ||
