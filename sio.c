@@ -41,8 +41,6 @@ static int _fdi = -1;
 static char *_sdev = NULL;
 static int _stdio = 0;
 
-extern FILE *_log;
-
 int sio_open(char *sdev, int speed) {
   struct termios ts;
   int off = 0;
@@ -179,7 +177,12 @@ int sio_receive(char *buf, int len) {
   if (_fdo < 0) return -1;
   for (i = 0; i < len; ++i) {
     n = read(_fdi, &buf[i], 1);
-    if (n == 0) break;		/* timeout! */
+    if (n == 0) {		/* timeout! */
+      if (_stdio) { /* for stdio, this is fatal */
+        exit(0);
+      }
+      break;
+    }
   }
   return i;
 }
