@@ -36,6 +36,7 @@
 #include "cpnet12.h"
 
 extern int _netID;
+extern int _clientID;
 extern int _debug;
 extern int _logged_in;
 
@@ -47,6 +48,7 @@ extern char _passwd[8];
 extern uchar allocv[256];
 
 extern FILE *_log;
+static int nxtClient = 0xfe;
 
 int cpnet_12() {
   int sid, fnc, len;
@@ -739,6 +741,21 @@ int cpnet_12() {
         send_error(sid, 106);
         break;
 
+      case 255:
+        /* TODO: auto-generate ID if none configured */
+        if (!_clientID) {
+          send_ok(nxtClient--, 255);
+          if (nxtClient < 0xf0) {
+            nxtClient = 0xfe;
+          }
+        } else {
+          send_ok(_clientID, 255);
+        }
+        break;
+      case 254:
+        /* TODO: close any connections */
+        /* no response expected */
+        break;
       default:
         send_error(sid, 0);
         break;

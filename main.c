@@ -58,6 +58,7 @@
 /*----------------------------------------------------------------------*/
 
 int  _netID = 0;   /* our server ID */
+int  _clientID = 0; /* our client's ID */
 int  _debug = 0;   /* debug mask */
 FILE *_log = NULL;
 
@@ -427,6 +428,9 @@ int read_ini(char *fname) {
       if (ini_get_item(ini, "log", arg)) {
         log = fopen(arg, "w");
         if (log != NULL) _log = log;
+      }
+      if (ini_get_item(ini, "clientid", arg)) {
+        _clientID = strtol(arg, NULL, 0);
       }
       if (ini_get_item(ini, "password", arg)) {
         int len = strlen(arg);
