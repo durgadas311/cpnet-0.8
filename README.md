@@ -1,9 +1,15 @@
 # cpnet-0.8
 ## Hector Peraza's Unix/Linux CP/NET server
 
-I have not yet found an established maintainer or devleopment contact
-for the "cpnet-0.8.tgz" code. As such, I've imported the code into
-a github project and have begun development.
+The official source repo is located at
+```
+https://github.com/hperaza/cpnet-server.git
+```
+
+All changes have been merged.
+This repo should be considered deprecated.
+
+=====
 
 First feature was to get the server working when "stdio" is selected
 as the device. This allows easier use from within emulations/simulations.
